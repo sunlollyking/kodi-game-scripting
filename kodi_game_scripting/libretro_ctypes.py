@@ -36,6 +36,19 @@ RETRO_ENVIRONMENT_SET_CORE_OPTIONS = 53
 RETRO_ENVIRONMENT_SET_CORE_OPTIONS_INTL = 54
 RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2 = 67
 RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2_INTL = 68
+RETRO_ENVIRONMENT_GET_VARIABLE = 15
+RETRO_ENVIRONMENT_SET_PIXEL_FORMAT = 10
+RETRO_ENVIRONMENT_GET_LOG_INTERFACE = 27
+RETRO_ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION = 59
+RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY = 9
+RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY = 31
+
+# A directory handed to cores that will not register their settings without
+# one. LRPS2 is the case in point: it builds its BIOS and memory-card option
+# lists from what is on disk, and returns from retro_init() before registering
+# anything at all when it finds no BIOS. Set KGS_SYSTEM_DIRECTORY to a tree
+# holding whatever the core insists on.
+SYSTEM_DIRECTORY_ENV = 'KGS_SYSTEM_DIRECTORY'
 
 # The core options version we tell cores the frontend speaks
 CORE_OPTIONS_VERSION = 2
@@ -56,6 +69,14 @@ class RetroSystemInfo(ctypes.Structure):
         ('need_fullpath', ctypes.c_bool),
         ('block_extract', ctypes.c_bool)
     ]
+
+
+RETRO_LOG_PRINTF_T = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.c_char_p)
+
+
+class RetroLogCallback(ctypes.Structure):
+    """ struct retro_log_callback """
+    _fields_ = [('log', RETRO_LOG_PRINTF_T)]
 
 
 class RetroVariable(ctypes.Structure):
@@ -311,6 +332,10 @@ class LibretroProbe:
         self._have_options = False
         # Held for as long as the core may call back into it
         self._callback = None
+        # Same, for any option value handed back through GET_VARIABLE
+        self._variable_values = []
+        # Discards what the core logs; held so the core can keep calling it
+        self._log_callback = RETRO_LOG_PRINTF_T(lambda level, message: None)
 
     def run(self):
         """ Probe the core, writing results out as they become known """
@@ -372,6 +397,53 @@ class LibretroProbe:
 
     def _environment(self, cmd, data):
         """ Libretro environment callback """
+        if cmd in (RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY,
+                   RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY):
+            directory = os.environ.get(SYSTEM_DIRECTORY_ENV)
+            if not directory:
+                return False
+            # The pointer has to outlive this call, so keep a reference
+            self._system_directory = ctypes.c_char_p(directory.encode())
+            ctypes.cast(data, ctypes.POINTER(ctypes.c_char_p))[0] = \
+                self._system_directory
+            return True
+
+        if cmd == RETRO_ENVIRONMENT_GET_LOG_INTERFACE:
+            # Not for the output, but because a core that asks for a logger and
+            # is refused one keeps the null pointer and calls through it
+            # anyway. LRPS2 logs each BIOS it finds, so refusing here ends
+            # retro_init() before it registers a single option.
+            ctypes.cast(data, ctypes.POINTER(RetroLogCallback))[0].log = \
+                self._log_callback
+            return True
+
+        if cmd == RETRO_ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION:
+            ctypes.cast(data, ctypes.POINTER(ctypes.c_uint))[0] = 0
+            return True
+
+        if cmd == RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
+            return True
+
+        if cmd == RETRO_ENVIRONMENT_GET_VARIABLE:
+            # Answer with the default the core just declared. A core that reads
+            # its own options back inside retro_init() -- LRPS2 does, right
+            # after registering them -- gets a NULL otherwise and takes it
+            # straight into strcmp, killing the probe before anything is
+            # written and leaving the core looking like it has no settings.
+            variable = ctypes.cast(data, ctypes.POINTER(RetroVariable))[0]
+            if not variable.key:
+                return False
+            key = _str(variable.key)
+            for option in self._result['options']:
+                if option['key'] != key:
+                    continue
+                value = ctypes.c_char_p(option['default'].encode())
+                self._variable_values.append(value)
+                ctypes.cast(data, ctypes.POINTER(RetroVariable))[0].value = \
+                    value
+                return True
+            return False
+
         if cmd == RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION:
             # This is what gets a core to hand over its categories, help text
             # and value labels instead of a flat list of pipe-delimited values
