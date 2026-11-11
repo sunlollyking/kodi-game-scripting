@@ -159,6 +159,13 @@ ADDONS = {
     'reminiscence':              ('REminiscence',               'Makefile',          '.',                 'jni', {}),
     'remotejoy':                 ('libretro-remotejoy',         'Makefile',          '.',                 'jni', {}),
     'retro8':                    ('retro8',                     'Makefile',          '.',                 'jni', {}),
+    'rpcs3':                     ('WizzardSK/rpcs3-libretro',   '',                  '',                  '', {
+        'branch': 'libretro',
+        'cmake': True,
+        'cmake_options': '-DBUILD_LIBRETRO_CORE_ONLY=ON -DBUILD_LLVM=OFF -DUSE_NATIVE_INSTRUCTIONS=OFF -DUSE_LTO=OFF -DUSE_PRECOMPILED_HEADERS=OFF -DUSE_SYSTEM_CURL=ON -DUSE_SYSTEM_FFMPEG=ON -DUSE_SYSTEM_OPENCV=OFF -DUSE_SDL=OFF -DUSE_FAUDIO=OFF -DUSE_LIBEVDEV=OFF -DUSE_DISCORD_RPC=OFF -DOpenGL_GL_PREFERENCE=GLVND -DCMAKE_DISABLE_FIND_PACKAGE_Wayland=ON -DCMAKE_BUILD_TYPE=Release',
+        'exclude_platforms': ['android-aarch64', 'android-armv7', 'osx-x86_64', 'osx-arm64', 'windows-i686', 'windows-x86_64'],
+        'submodules': True,
+    }),
     #'rustation':                 ('rustation-libretro',         'Makefile',          '.',                 'jni', {}),  # Checkout fails
     'same_cdi':                  ('same_cdi',                   'Makefile.libretro', '.',                 '', {
         'platform_android_aarch64': 'android-arm64',
