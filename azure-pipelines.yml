@@ -211,6 +211,7 @@ jobs:
         - daphne
         - crocods
         - craft
+        - citra
         - chailove
         - cemu
         - cap32

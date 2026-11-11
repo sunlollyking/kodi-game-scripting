@@ -73,6 +73,13 @@ ADDONS = {
         'submodules': True,
     }),
     'chailove':                  ('kodi-game/libretro-chailove', 'Makefile',         '.',                 'jni', {}),
+    'citra':                     ('citra',                      '',                  '',                  '', {
+        'branch': 'master',
+        'cmake': True,
+        'cmake_options': '-DENABLE_LIBRETRO=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DENABLE_OPT=OFF -DENABLE_QT=OFF -DENABLE_SDL2=OFF -DENABLE_TESTS=OFF -DENABLE_DEDICATED_ROOM=OFF -DENABLE_WEB_SERVICE=OFF -DENABLE_SCRIPTING=OFF -DENABLE_CUBEB=OFF -DENABLE_OPENAL=OFF -DENABLE_LIBUSB=OFF -DCITRA_ENABLE_BUNDLE_TARGET=OFF -DCITRA_WARNINGS_AS_ERRORS=OFF -DENABLE_LTO=OFF -DCMAKE_BUILD_TYPE=Release',
+        'exclude_platforms': ['android-aarch64', 'android-armv7', 'osx-x86_64', 'osx-arm64', 'windows-i686', 'windows-x86_64'],
+        'submodules': True,
+    }),
     'craft':                     ('Craft',                      'Makefile.libretro', '.',                 'jni', {}),
     'crocods':                   ('libretro-crocods',           'Makefile',          '.',                 'jni', {}),
     'daphne':                    ('daphne',                     'Makefile',          '.',                 'jni', {}),
